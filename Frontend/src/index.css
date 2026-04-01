@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ================================================================
+   FREELANCER.IO — COMPLETE DESIGN SYSTEM
+   ================================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --indigo:       #6366f1;
+  --indigo-dark:  #4338ca;
+  --indigo-deep:  #312e81;
+  --indigo-glow:  rgba(99,102,241,0.25);
+  --emerald:      #10b981;
+  --emerald-dark: #059669;
+  --amber:        #f59e0b;
+  --amber-dark:   #d97706;
+  --rose:         #f43f5e;
+  --rose-dark:    #e11d48;
+  --sky:          #38bdf8;
+  --sky-dark:     #0284c7;
+  --navy-950:     #020817;
+  --navy-900:     #0a0f1e;
+  --navy-800:     #0f172a;
+  --navy-700:     #1e293b;
+  --navy-600:     #334155;
+  --slate-100:    #f1f5f9;
+  --slate-300:    #cbd5e1;
+  --slate-400:    #94a3b8;
+  --slate-500:    #64748b;
+  --glass:        rgba(255,255,255,0.04);
+  --glass2:       rgba(255,255,255,0.07);
+  --border:       rgba(255,255,255,0.09);
+  --border2:      rgba(99,102,241,0.25);
+  --shadow:       0 4px 24px rgba(0,0,0,0.4);
+  --shadow-lg:    0 12px 48px rgba(0,0,0,0.55);
+  --shadow-ind:   0 8px 32px rgba(99,102,241,0.35);
+  --font:         'Inter','Segoe UI',system-ui,sans-serif;
+}
+
+body {
+  font-family: var(--font);
+  background: var(--navy-950);
+  color: var(--slate-300);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+a { text-decoration: none; color: inherit; }
+button { font-family: var(--font); cursor: pointer; }
+input, select, textarea { font-family: var(--font); }

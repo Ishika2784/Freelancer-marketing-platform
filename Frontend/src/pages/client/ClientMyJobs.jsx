@@ -1,0 +1,259 @@
+import { useEffect, useState, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import { api, timeAgo } from "../../utils/api";
+import { useToast } from "../../components/Toast";
+import ConfirmModal from "../../components/ConfirmModal";
+
+export default function ClientMyJobs() {
+  const navigate    = useNavigate();
+  const toast       = useToast();
+  const [jobs, setJobs]               = useState([]);
+  const [user, setUser]               = useState(null);
+  const [loading, setLoading]         = useState(true);
+  const [matches, setMatches]         = useState({});
+  const [loadingM, setLoadingM]       = useState({});
+  const [applicants, setApplicants]   = useState({});
+  const [loadingA, setLoadingA]       = useState({});
+  const [editId, setEditId]           = useState(null);
+  const [editForm, setEditForm]       = useState({ title: "", description: "", budget: "", skills: "" });
+  const [deleteTarget, setDelete]     = useState(null);
+  const [saving, setSaving]           = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [uRes, jRes] = await Promise.all([api.get("/auth/me"), api.get("/jobs/my")]);
+      setUser(uRes.data);
+      setJobs(jRes.data);
+    } catch { toast("Failed to load jobs", "error"); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleDelete = async () => {
+    try {
+      await api.delete(`/jobs/${deleteTarget}`);
+      setJobs(j => j.filter(x => x._id !== deleteTarget));
+      toast("Job deleted");
+    } catch (e) { toast(e.response?.data?.message || "Delete failed", "error"); }
+    finally { setDelete(null); }
+  };
+
+  const handleUpdate = async id => {
+    if (!editForm.title.trim()) { toast("Title required", "error"); return; }
+    setSaving(true);
+    try {
+      await api.put(`/jobs/${id}`, editForm);
+      setEditId(null);
+      await load();
+      toast("Job updated");
+    } catch (e) { toast(e.response?.data?.message || "Update failed", "error"); }
+    finally { setSaving(false); }
+  };
+
+  const fetchMatches = async id => {
+    if (matches[id]) { setMatches(p => { const n = { ...p }; delete n[id]; return n; }); return; }
+    setLoadingM(p => ({ ...p, [id]: true }));
+    try {
+      const res = await api.get(`/jobs/${id}/matches`);
+      setMatches(p => ({ ...p, [id]: res.data }));
+    } catch (e) { 
+      toast(e.response?.data?.message || "AI match failed", "error"); 
+    }
+    finally { setLoadingM(p => ({ ...p, [id]: false })); }
+  };
+
+  const fetchApplicants = async id => {
+    if (applicants[id] !== undefined) { 
+      setApplicants(p => { const n = { ...p }; delete n[id]; return n; }); 
+      return; 
+    }
+    setLoadingA(p => ({ ...p, [id]: true }));
+    try {
+      const res = await api.get(`/jobs/${id}/applicants`);
+      setApplicants(p => ({ ...p, [id]: res.data }));
+    } catch (e) { toast(e.response?.data?.message || "Failed to load applicants", "error"); }
+    finally { setLoadingA(p => ({ ...p, [id]: false })); }
+  };
+
+  const isPro = user?.plan === "pro";
+
+  if (loading) return <div style={{ textAlign: "center", padding: 60, color: "#94a3b8" }}>Loading…</div>;
+
+  return (
+    <>
+      {deleteTarget && (
+        <ConfirmModal message="Delete this job posting?" onConfirm={handleDelete} onCancel={() => setDelete(null)} />
+      )}
+
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 28, flexWrap: "wrap", gap: 12 }}>
+        <div className="prl-page-title" style={{ margin: 0 }}>
+          <h1>My Posted Jobs</h1>
+          <p>Manage your listings and view AI-recommended freelancers.</p>
+        </div>
+        <button className="btn btn-coral" onClick={() => navigate("/client/post-job")}>+ Post New Job</button>
+      </div>
+
+      {jobs.length === 0 ? (
+        <div className="panel" style={{ textAlign: "center", padding: 60 }}>
+          <div style={{ fontSize: "3rem", marginBottom: 12 }}>📋</div>
+          <h3 style={{ color: "#1a1a2e", marginBottom: 8 }}>No jobs posted yet</h3>
+          <p style={{ color: "#94a3b8", marginBottom: 20 }}>Post your first job and start receiving proposals.</p>
+          <button className="btn btn-coral" onClick={() => navigate("/client/post-job")}>Post a Job →</button>
+        </div>
+      ) : jobs.map(job => (
+        <div key={job._id} className="job-card">
+          {editId === job._id ? (
+            /* Edit form */
+            <div className="w-edit-form">
+              <div className="pj-field"><label className="pj-label">Title</label>
+                <input value={editForm.title} onChange={e => setEditForm(f => ({ ...f, title: e.target.value }))} /></div>
+              <div className="pj-field"><label className="pj-label">Description</label>
+                <textarea value={editForm.description} onChange={e => setEditForm(f => ({ ...f, description: e.target.value }))} rows={3} style={{ resize: "vertical" }} /></div>
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
+                <div className="pj-field"><label className="pj-label">Budget (₹)</label>
+                  <input type="number" value={editForm.budget} onChange={e => setEditForm(f => ({ ...f, budget: e.target.value }))} /></div>
+                <div className="pj-field"><label className="pj-label">Skills</label>
+                  <input value={editForm.skills} onChange={e => setEditForm(f => ({ ...f, skills: e.target.value }))} placeholder="React, Node…" /></div>
+              </div>
+              <div style={{ display: "flex", gap: 8, marginTop: 12 }}>
+                <button className="btn btn-coral btn-sm" onClick={() => handleUpdate(job._id)} disabled={saving}>
+                  {saving ? "Saving…" : "Save Changes"}
+                </button>
+                <button className="btn btn-sm"
+                  style={{ background: "#f1f5f9", color: "#475569", border: "1.5px solid #e2e8f0", borderRadius: 100 }}
+                  onClick={() => setEditId(null)}>Cancel</button>
+              </div>
+            </div>
+          ) : (
+            /* Job view */
+            <>
+              <div className="job-header">
+                <div>
+                  <h3 className="job-title">{job.title}</h3>
+                  {job.description && (
+                    <p style={{ fontSize: 13, color: "#64748b", margin: "6px 0 0", lineHeight: 1.5 }}>
+                      {job.description.slice(0, 120)}{job.description.length > 120 ? "…" : ""}
+                    </p>
+                  )}
+                </div>
+                <span className="job-date">
+                  {new Date(job.createdAt).toLocaleDateString("en-IN", { day: "numeric", month: "short", year: "numeric" })}
+                </span>
+              </div>
+
+              <div style={{ display: "flex", alignItems: "center", gap: 16, margin: "10px 0", flexWrap: "wrap" }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: "#15803d" }}>₹{Number(job.budget || 0).toLocaleString()}</span>
+                <span style={{ fontSize: 12, color: "#94a3b8" }}>•</span>
+                <span style={{ fontSize: 13, color: "#64748b", textTransform: "capitalize" }}>{job.type || "Fixed"} Price</span>
+              </div>
+
+              <div style={{ marginBottom: 12 }}>
+                {job.skills?.length > 0
+                  ? job.skills.map((s, i) => <span key={i} className="prl-skill-tag">{s}</span>)
+                  : <span style={{ fontSize: 13, color: "#94a3b8" }}>No skills specified</span>}
+              </div>
+
+              <div className="job-actions">
+                <button className="btn btn-sm"
+                  style={{ background: "#f1f5f9", color: "#475569", border: "1.5px solid #e2e8f0", borderRadius: 100, fontWeight: 600 }}
+                  onClick={() => { setEditId(job._id); setEditForm({ title: job.title, description: job.description || "", budget: job.budget, skills: job.skills?.join(", ") || "" }); }}>
+                  ✏️ Edit
+                </button>
+                <button className="btn btn-sm"
+                  style={{ background: "#fff1f2", color: "#be123c", border: "1.5px solid #fecdd3", borderRadius: 100, fontWeight: 600 }}
+                  onClick={() => setDelete(job._id)}>
+                  🗑 Delete
+                </button>
+                <button className="btn btn-sm"
+                  style={{ background: "#eff6ff", color: "#1d4ed8", border: "1.5px solid #bfdbfe", borderRadius: 100, fontWeight: 600 }}
+                  onClick={() => fetchApplicants(job._id)}
+                  disabled={loadingA[job._id]}>
+                  {loadingA[job._id] ? "Loading…" : applicants[job._id] !== undefined ? "Hide Applicants" : `👥 Applicants`}
+                </button>
+                {isPro
+                  ? <button className="btn btn-coral btn-sm" onClick={() => fetchMatches(job._id)} disabled={loadingM[job._id]}>
+                      {loadingM[job._id] ? "Finding…" : matches[job._id] ? "Hide Matches" : "✨ AI Matches"}
+                    </button>
+                  : <button className="btn btn-sm"
+                      style={{ background: "#fffbeb", color: "#b45309", border: "1.5px solid #fde68a", borderRadius: 100, fontWeight: 600 }}
+                      onClick={() => navigate("/pricing")}>
+                      ⭐ Upgrade for AI
+                    </button>
+                }
+              </div>
+            </>
+          )}
+
+          {loadingM[job._id] && (
+            <div style={{ marginTop: 14, padding: "12px 16px", background: "#f8fafc", borderRadius: 10, fontSize: 13, color: "#64748b" }}>
+              Finding best freelancers with AI…
+            </div>
+          )}
+          {matches[job._id] && (
+            <div className="w-matches-section">
+              <h4>✨ Gemini AI Matches</h4>
+              {matches[job._id].ai_response
+                ? <div className="w-ai-response">{matches[job._id].ai_response}</div>
+                : <p style={{ color: "#94a3b8", fontSize: 13 }}>No matches generated.</p>}
+            </div>
+          )}
+          {applicants[job._id] !== undefined && (
+            <div className="w-matches-section">
+              <h4>👥 Applicants ({applicants[job._id].length})</h4>
+              {applicants[job._id].length === 0 ? (
+                <p style={{ color: "#94a3b8", fontSize: 13 }}>No applicants yet.</p>
+              ) : applicants[job._id].map((a, i) => (
+                <div key={i} style={{ display: "flex", alignItems: "center", gap: 12, padding: "10px 0", borderBottom: "1px solid #f1f5f9" }}>
+                  <div style={{ width: 36, height: 36, borderRadius: "50%", background: "#6366f1", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 700, fontSize: 15, flexShrink: 0 }}>
+                    {a.freelancer?.name?.charAt(0).toUpperCase()}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontWeight: 600, fontSize: 14, color: "#1a1a2e" }}>{a.freelancer?.name}</div>
+                    <div style={{ fontSize: 12, color: "#64748b" }}>{a.freelancer?.email}</div>
+                    {a.freelancer?.skills?.length > 0 && (
+                      <div style={{ marginTop: 4 }}>
+                        {a.freelancer.skills.slice(0, 4).map((s, j) => (
+                          <span key={j} className="prl-skill-tag" style={{ fontSize: 11 }}>{s}</span>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 6 }}>
+                    <div style={{ fontSize: 12, color: "#94a3b8" }}>
+                      {new Date(a.appliedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                    </div>
+                    {a.status === "hired" ? (
+                      <span style={{ background: "#f0fdf4", color: "#15803d", border: "1px solid #bbf7d0", padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 700 }}>
+                        ✅ Hired
+                      </span>
+                    ) : a.status === "rejected" ? (
+                      <span style={{ background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 700 }}>
+                        Not Selected
+                      </span>
+                    ) : (
+                      <button className="btn btn-sm"
+                        style={{ background: "#f0fdf4", color: "#15803d", border: "1.5px solid #bbf7d0", borderRadius: 100, fontWeight: 700, padding: "5px 14px", fontSize: 12 }}
+                        onClick={async () => {
+                          try {
+                            await api.post(`/jobs/${job._id}/hire`, { freelancerId: a.freelancer._id });
+                            toast(`${a.freelancer.name} hired successfully!`);
+                            // Refresh applicants
+                            const res = await api.get(`/jobs/${job._id}/applicants`);
+                            setApplicants(p => ({ ...p, [job._id]: res.data }));
+                          } catch (e) { toast(e.response?.data?.message || "Hire failed", "error"); }
+                        }}>
+                        🤝 Hire
+                      </button>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ))}
+    </>
+  );
+}
