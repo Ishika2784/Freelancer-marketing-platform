@@ -1,8 +1,7 @@
-﻿﻿import { useEffect, useState } from "react";
+﻿﻿﻿﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../styles.css";
-import Navbar from "../components/Navbar";
 import { useToast } from "../components/Toast";
 import ConfirmModal from "../components/ConfirmModal";
 
@@ -13,7 +12,7 @@ export default function MyJobs() {
   const [loadingMatches, setLoadingMatches] = useState({});
   const [user, setUser] = useState(null);
   const [editingJobId, setEditingJobId] = useState(null);
-  const [editForm, setEditForm] = useState({ title:"", description:"", budget:"", skills:"" });
+  const [editForm, setEditForm] = useState({ title:"", description:"", budget:"", skills:"", type:"fixed" });
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
   const navigate = useNavigate();
@@ -80,7 +79,6 @@ export default function MyJobs() {
   return (
     <div className="w-dashboard">
       {deleteTarget && <ConfirmModal message="Delete this job posting?" onConfirm={handleDelete} onCancel={()=>setDeleteTarget(null)} />}
-      <Navbar user={user} />
       <div className="w-container">
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:28,flexWrap:"wrap",gap:12}}>
           <div><h2 style={{fontSize:"1.8rem",fontWeight:800,color:"#1a1a2e",margin:0}}>My Posted Jobs</h2><p style={{color:"#94a3b8",fontSize:14,margin:"4px 0 0"}}>Manage listings and view AI-recommended freelancers</p></div>
@@ -99,8 +97,15 @@ export default function MyJobs() {
               <div className="w-edit-form">
                 <div className="pj-field"><label className="pj-label">Title</label><input value={editForm.title} onChange={e=>setEditForm({...editForm,title:e.target.value})} /></div>
                 <div className="pj-field"><label className="pj-label">Description</label><textarea value={editForm.description} onChange={e=>setEditForm({...editForm,description:e.target.value})} rows={3} style={{resize:"vertical"}} /></div>
-                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                <div style={{display:"grid",gridTemplateColumns:"1fr 1fr 1fr",gap:12}}>
                   <div className="pj-field"><label className="pj-label">Budget (Rs)</label><input type="number" value={editForm.budget} onChange={e=>setEditForm({...editForm,budget:e.target.value})} /></div>
+                  <div className="pj-field">
+                    <label className="pj-label">Project Type</label>
+                    <select value={editForm.type} onChange={e=>setEditForm({...editForm,type:e.target.value})} style={{padding:"13px 16px",border:"1.5px solid #e2e8f0",borderRadius:10,fontSize:14,background:"#fff",color:"#1a1a2e",outline:"none",width:"100%"}}>
+                      <option value="fixed">Fixed Price</option>
+                      <option value="hourly">Hourly Rate</option>
+                    </select>
+                  </div>
                   <div className="pj-field"><label className="pj-label">Skills</label><input value={editForm.skills} onChange={e=>setEditForm({...editForm,skills:e.target.value})} placeholder="React, Node..." /></div>
                 </div>
                 <div style={{display:"flex",gap:8,marginTop:12}}>
@@ -126,7 +131,7 @@ export default function MyJobs() {
                   {job.skills?.length>0 ? job.skills.map((s,i)=><span key={i} className="prl-skill-tag">{s}</span>) : <span style={{fontSize:13,color:"#94a3b8"}}>No skills specified</span>}
                 </div>
                 <div className="w-job-actions">
-                  <button className="w-btn w-btn-sm" style={{background:"#f1f5f9",color:"#475569",border:"1.5px solid #e2e8f0",borderRadius:100,fontWeight:600}} onClick={()=>{ setEditingJobId(job._id); setEditForm({title:job.title,description:job.description||"",budget:job.budget,skills:job.skills?.join(", ")||""}); }}>Edit</button>
+                  <button className="w-btn w-btn-sm" style={{background:"#f1f5f9",color:"#475569",border:"1.5px solid #e2e8f0",borderRadius:100,fontWeight:600}} onClick={()=>{ setEditingJobId(job._id); setEditForm({title:job.title,description:job.description||"",budget:job.budget,skills:job.skills?.join(", ")||"",type:job.type||"fixed"}); }}>Edit</button>
                   <button className="w-btn w-btn-sm" style={{background:"#fff1f2",color:"#be123c",border:"1.5px solid #fecdd3",borderRadius:100,fontWeight:600}} onClick={()=>setDeleteTarget(job._id)}>Delete</button>
                   <span className="w-bid-pill" style={{marginLeft:"auto"}}>Bids: {bidCount(job._id)}</span>
                   {isPro ? (

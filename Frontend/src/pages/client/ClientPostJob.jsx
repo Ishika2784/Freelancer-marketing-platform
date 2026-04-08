@@ -11,7 +11,7 @@ const SKILL_SUGGESTIONS = [
 export default function ClientPostJob() {
   const navigate    = useNavigate();
   const toast       = useToast();
-  const [form, setForm]         = useState({ title: "", description: "", budget: "", skills: "", type: "fixed" });
+  const [form, setForm] = useState({ title: "", description: "", budget: "", skills: "", type: "fixed", deadline: "" });
   const [errors, setErrors]     = useState({});
   const [submitting, setSubmitting] = useState(false);
 
@@ -91,6 +91,14 @@ export default function ClientPostJob() {
               <option value="hourly">Hourly Rate</option>
             </select>
           </div>
+        </div>
+
+        {/* Skills */}
+        <div className="pj-field">
+          <label className="pj-label">Application Deadline</label>
+          <input name="deadline" type="date" value={form.deadline} onChange={handleChange}
+            min={new Date().toISOString().split("T")[0]}
+            style={{ width: "100%", padding: "13px 16px", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box" }} />
         </div>
 
         {/* Skills */}

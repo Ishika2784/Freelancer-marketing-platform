@@ -37,6 +37,7 @@ const jobSchema = new mongoose.Schema({
 
     status: { type: String, enum: ["open", "in-progress", "completed"], default: "open" },
     hiredFreelancer: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    deadline: { type: Date, default: null },
 
     createdAt: {
         type: Date,

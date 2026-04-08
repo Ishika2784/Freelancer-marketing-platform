@@ -4,20 +4,18 @@ const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 exports.createJob = async (req, res) => {
     try {
-        const { title, description, budget, skills } = req.body;
+        const { title, description, budget, skills, deadline, type } = req.body;
 
         if (!title || !description || !budget) {
-            return res.status(400).json({
-                message: "All fields are required"
-            });
+            return res.status(400).json({ message: "All fields are required" });
         }
 
         const job = new Job({
-            title,
-            description,
-            budget,
-            skills: skills ? skills.split(",") : [], // convert string → array
-            client: req.user.userId
+            title, description, budget,
+            type: type || "fixed",
+            skills: skills ? skills.split(",").map(s => s.trim()).filter(Boolean) : [],
+            client: req.user.userId,
+            deadline: deadline ? new Date(deadline) : null
         });
 
         await job.save();
@@ -64,10 +62,11 @@ exports.updateJob = async (req, res) => {
         const job = await Job.findOne({ _id: req.params.id, client: req.user.userId });
         if (!job) return res.status(404).json({ message: "Job not found" });
 
-        const { title, description, budget, skills } = req.body;
+        const { title, description, budget, skills, type } = req.body;
         if (title) job.title = title;
         if (description) job.description = description;
         if (budget) job.budget = budget;
+        if (type) job.type = type;
         if (skills !== undefined) job.skills = typeof skills === "string" ? skills.split(",").map(s => s.trim()).filter(Boolean) : skills;
 
         await job.save();
@@ -244,7 +243,7 @@ Output format:
    Reason: <short explanation>`;
 
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-        const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" });
+        const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
 
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
@@ -255,6 +254,33 @@ Output format:
         if (error.status === 429) {
             return res.status(429).json({ message: "AI quota exceeded. Please try again later or upgrade your Gemini API plan." });
         }
+        if (error.status === 404) {
+            return res.status(404).json({ message: "AI model not available in your region. Please check your Google AI account." });
+        }
         res.status(500).json({ message: "Error fetching matches" });
+    }
+};
+
+exports.rateFreelancer = async (req, res) => {
+    try {
+        const { freelancerId, rating } = req.body;
+        const job = await Job.findOne({ _id: req.params.id, client: req.user.userId });
+        if (!job) return res.status(404).json({ message: "Job not found" });
+
+        job.status = "completed";
+        await job.save();
+
+        const freelancer = await User.findById(freelancerId);
+        if (freelancer) {
+            const currentRating = freelancer.rating || 0;
+            const count = freelancer.ratingCount || 0;
+            freelancer.rating = ((currentRating * count) + Number(rating)) / (count + 1);
+            freelancer.ratingCount = count + 1;
+            await freelancer.save();
+        }
+
+        res.json({ message: "Freelancer rated successfully" });
+    } catch (error) {
+        res.status(500).json({ message: "Server error" });
     }
 };

@@ -1,7 +1,8 @@
-﻿import { useNavigate } from "react-router-dom";
-import { useState } from "react";
+﻿import { useNavigate, Link } from "react-router-dom";
+import { useState, useEffect } from "react";
 import "../styles.css";
 import { storage } from "../utils/storage";
+import axios from "axios";
 
 const SKILLS = ["UI Designer", "3D Artist", "React Dev", "Copywriter", "Motion Designer", "Full Stack"];
 
@@ -18,9 +19,21 @@ const TESTIMONIALS = [
 
 export default function Home() {
   const navigate = useNavigate();
-  const [isLoggedIn, setIsLoggedIn] = useState(() => storage.isLoggedIn() || !!localStorage.getItem("token"));
-  const [userRole, setUserRole]     = useState(() => storage.getRole() || localStorage.getItem("role"));
-  const [email, setEmail]           = useState("");
+  const isLoggedIn = storage.isLoggedIn() || !!localStorage.getItem("token");
+  const userRole   = storage.getRole() || localStorage.getItem("role");
+  const [email, setEmail] = useState("");
+  const [showBanner, setShowBanner] = useState(true);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      const token = localStorage.getItem("token");
+      axios.get("http://localhost:5000/api/auth/me", { headers: { Authorization: `Bearer ${token}` } })
+        .then(r => {
+          if (r.data.plan === "pro") setShowBanner(false);
+        })
+        .catch(() => {});
+    }
+  }, [isLoggedIn]);
 
   const toDashboard = () =>
     navigate(userRole === "client" ? "/client/dashboard" : "/freelancer/dashboard");
@@ -29,8 +42,6 @@ export default function Home() {
     storage.clearAuth();
     localStorage.removeItem("token");
     localStorage.removeItem("role");
-    setIsLoggedIn(false);
-    setUserRole(null);
     navigate("/");
   };
 
@@ -40,11 +51,13 @@ export default function Home() {
     <div className="w-page">
 
       {/* ── BANNER ── */}
-      <div className="banner">
-        Special offer — upgrade to Pro and unlock AI matching.
-        <a href="/pricing"> See pricing →</a>
-        <button className="banner-close">✕</button>
-      </div>
+      {showBanner && (
+        <div className="banner">
+          Special offer — upgrade to Pro and unlock AI matching.
+          <a href="/pricing"> See pricing →</a>
+          <button className="banner-close" onClick={() => setShowBanner(false)}>✕</button>
+        </div>
+      )}
 
       {/* ── NAVBAR ── */}
       <nav className="nav">
@@ -53,10 +66,10 @@ export default function Home() {
           Freelancer.io
         </div>
         <div className="navlinks">
-          <a href="#">Find Talent</a>
-          <a href="#">Find Work</a>
-          <a href="#">Why Us</a>
-          <a href="#">Enterprise</a>
+          <a href="#features" onClick={e => { e.preventDefault(); document.querySelector('.features-strip')?.scrollIntoView({ behavior: 'smooth' }); }}>Find Talent</a>
+          <a href="#" onClick={e => { e.preventDefault(); navigate(isLoggedIn ? (userRole === 'freelancer' ? '/freelancer/find-project' : '/register') : '/register'); }}>Find Work</a>
+          <a href="#why" onClick={e => { e.preventDefault(); document.querySelector('.connect')?.scrollIntoView({ behavior: 'smooth' }); }}>Why Us</a>
+          <a href="#" onClick={e => { e.preventDefault(); navigate('/pricing'); }}>Enterprise</a>
         </div>
         <div className="nav-actions">
           {isLoggedIn ? (
@@ -118,7 +131,7 @@ export default function Home() {
         {[
           { icon: "👥", title: "Diverse Talent Pool",      desc: "Access a global network of skilled professionals spanning various industries." },
           { icon: "💰", title: "Cost-Effectiveness",       desc: "Save on overhead costs by hiring freelancers on a project basis." },
-          { icon: "🎯", title: "Specialized Expertise",    desc: "Tap into niche expertise that may not be available in-house." },
+          { icon: "💡", title: "Specialized Expertise",    desc: "Tap into niche expertise that may not be available in-house." },
           { icon: "🌍", title: "Access to Global Markets", desc: "Expand your reach by working with freelancers around the world." },
         ].map((f, i) => (
           <div key={i} className="feature-item">
@@ -149,7 +162,7 @@ export default function Home() {
           <p>Our platform offers a seamless experience, empowering freelancers to showcase their skills and thrive in the workforce landscape.</p>
           <p>Whether you're a seasoned freelancer or a business in need of specialized talent — we connect the right people.</p>
           <button
-            className="w-btn w-btn-outline"
+            className="btn btn-outline"
             style={{ borderRadius: 100, padding: "12px 28px" }}
             onClick={() => isLoggedIn ? toDashboard() : navigate("/register")}
           >
@@ -256,8 +269,8 @@ export default function Home() {
                 onChange={e => setEmail(e.target.value)}
                 className="join-input"
               />
-              <button className="w-btn w-btn-yellow" onClick={() => isLoggedIn ? toDashboard() : navigate("/register")}>
-                {isLoggedIn ? "Go to Dashboard" : "Join for Free"}
+              <button className="btn btn-yellow" onClick={() => isLoggedIn ? toDashboard() : navigate("/register")}>
+                {isLoggedIn ? "Go to Dashboard →" : "Join for Free"}
               </button>
             </div>
             <div className="join-note">🛡 We don't share or sell your email address publicly</div>
@@ -282,22 +295,22 @@ export default function Home() {
           </div>
           <div className="footer-col">
             <div className="footer-col-title">ABOUT</div>
-            <a href="#">Careers</a>
-            <a href="#">Press & News</a>
-            <a href="#">Partnerships</a>
-            <a href="#">Privacy Policy</a>
+            <Link className="footer-link" to="/careers">Careers</Link>
+            <Link className="footer-link" to="/blog">Press & News</Link>
+            <Link className="footer-link" to="/blog">Partnerships</Link>
+            <Link className="footer-link" to="/privacy">Privacy Policy</Link>
           </div>
           <div className="footer-col">
             <div className="footer-col-title">COMMUNITY</div>
-            <a href="#">Forum</a>
-            <a href="#">Events</a>
-            <a href="#">Blog</a>
-            <a href="#">Podcasts</a>
+            <Link className="footer-link" to="/help">Forum</Link>
+            <Link className="footer-link" to="/events">Events</Link>
+            <Link className="footer-link" to="/blog">Blog</Link>
+            <Link className="footer-link" to="/learn">Podcasts</Link>
           </div>
           <div className="footer-col">
             <div className="footer-col-title">SUPPORT</div>
-            <a href="#">Help</a>
-            <a href="#">Learn</a>
+            <Link className="footer-link" to="/help">Help</Link>
+            <Link className="footer-link" to="/learn">Learn</Link>
           </div>
         </div>
         <div className="footer-bottom">

@@ -164,6 +164,18 @@ export default function FreelancerFindProject() {
                   <div className="prl-job-top">
                     <div className="prl-job-level">{job.level || "Open"}</div>
                     <div className="prl-job-posted">{timeAgo(job.createdAt)}</div>
+                    {job.deadline && (() => {
+                      const d = Math.ceil((new Date(job.deadline) - new Date()) / 86400000);
+                      return (
+                        <span style={{
+                          background: d <= 2 ? "#fff1f2" : d <= 5 ? "#fff7ed" : "#f0fdf4",
+                          color: d <= 2 ? "#be123c" : d <= 5 ? "#c2410c" : "#15803d",
+                          padding: "2px 8px", borderRadius: 100, fontSize: 11, fontWeight: 700
+                        }}>
+                          {d <= 0 ? "⚠️ Expired" : d === 1 ? "⏰ Last day!" : `⏳ ${d}d left`}
+                        </span>
+                      );
+                    })()}
                     <button className="prl-job-menu">⋮</button>
                   </div>
                   <h3 className="prl-job-title">{job.title}</h3>

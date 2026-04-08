@@ -25,7 +25,21 @@ export default function FreelancerOverview({ user }) {
 
   const userSkills = user.skills || [];
   const recommended = jobs
+    .filter(j => j.status !== "in-progress" && j.status !== "hired" && j.status !== "closed" && j.status !== "completed")
     .filter(j => userSkills.length === 0 || j.skills?.some(s => userSkills.includes(s)))
+    .map(j => {
+      const daysLeft = j.deadline
+        ? Math.ceil((new Date(j.deadline) - new Date()) / 86400000)
+        : null;
+      return { ...j, daysLeft };
+    })
+    .sort((a, b) => {
+      // Jobs with deadlines first, sorted by urgency
+      if (a.daysLeft !== null && b.daysLeft !== null) return a.daysLeft - b.daysLeft;
+      if (a.daysLeft !== null) return -1;
+      if (b.daysLeft !== null) return 1;
+      return new Date(b.createdAt) - new Date(a.createdAt);
+    })
     .slice(0, 4);
 
   const appliedJobs = jobs.filter(j => proposalMap[j._id]).slice(0, 3);
@@ -95,8 +109,8 @@ export default function FreelancerOverview({ user }) {
         {[
           { label: "Open Projects",  value: loading ? "…" : jobs.length,        icon: "💼", path: "/freelancer/find-project" },
           { label: "Applied",        value: loading ? "…" : appliedCount,        icon: "📨", path: "/freelancer/proposals" },
-          { label: "Hired",          value: loading ? "…" : hiredCount,          icon: "✅", path: "/freelancer/proposals" },
-          { label: "Skills",         value: user.skills?.length || 0,            icon: "🎯" },
+          { label: "Hired",          value: loading ? "…" : hiredCount,          icon: "🤝🏼", path: "/freelancer/proposals" },
+          { label: "Skills",         value: user.skills?.length || 0,            icon: "💡" },
         ].map((s, i) => (
           <div key={i} className="stat"
             onClick={() => s.path && navigate(s.path)}
@@ -126,7 +140,19 @@ export default function FreelancerOverview({ user }) {
             <div key={job._id} className="mini-row">
               <div>
                 <div className="mini-title">{job.title}</div>
-                <div className="mini-meta">₹{Number(job.budget || 0).toLocaleString()} · {timeAgo(job.createdAt)}</div>
+                <div className="mini-meta">
+                  ₹{Number(job.budget || 0).toLocaleString()} · {timeAgo(job.createdAt)}
+                  {job.daysLeft !== null && (
+                    <span style={{
+                      marginLeft: 8,
+                      background: job.daysLeft <= 2 ? "#fff1f2" : job.daysLeft <= 5 ? "#fff7ed" : "#f0fdf4",
+                      color: job.daysLeft <= 2 ? "#be123c" : job.daysLeft <= 5 ? "#c2410c" : "#15803d",
+                      padding: "1px 7px", borderRadius: 100, fontSize: 10, fontWeight: 700
+                    }}>
+                      {job.daysLeft <= 0 ? "⚠️ Expired" : job.daysLeft === 1 ? "⏰ Last day!" : `⏳ ${job.daysLeft}d left`}
+                    </span>
+                  )}
+                </div>
               </div>
               <span
                 onClick={() => !applied[job._id] && navigate("/freelancer/find-project")}

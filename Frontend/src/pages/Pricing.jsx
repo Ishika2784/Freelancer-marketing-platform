@@ -2,7 +2,6 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles.css";
 import axios from "axios";
-import Background3D from "../components/Background3D";
 
 function Pricing(){
     const [loading, setLoading] = useState(false);
@@ -97,7 +96,6 @@ function Pricing(){
 };
 return(
     <div className="pricing-page">
-        <Background3D />
         <div className="pricing-hero">
             <h1>Choose Your Plan</h1>
             <p>Start free, upgrade when you're ready</p>

@@ -31,7 +31,9 @@ export default function FreelancerCompanies() {
   }, []);
 
   const filtered = clients.filter(c =>
-    !search || c.name.toLowerCase().includes(search.toLowerCase())
+    !search || 
+    (c.name && typeof c.name === "string" && c.name.toLowerCase().includes(search.toLowerCase())) ||
+    (c.industry && typeof c.industry === "string" && c.industry.toLowerCase().includes(search.toLowerCase()))
   );
 
   return (

@@ -12,7 +12,8 @@ const {
     getMyProposals,
     applyToJob,
     getApplicants,
-    getJobMatches
+    getJobMatches,
+    rateFreelancer
 } = require("../controllers/JobControllers");
 
 const authMiddleware = require("../middlewares/authMiddleware");
@@ -49,5 +50,8 @@ router.post("/:id/hire", authMiddleware, hireFreelancer);
 
 // GET matches for a job
 router.get("/:id/matches", authMiddleware, getJobMatches);
+
+// POST rate a freelancer and complete job (client)
+router.post("/:id/rate", authMiddleware, rateFreelancer);
 
 module.exports = router;

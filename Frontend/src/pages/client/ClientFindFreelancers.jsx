@@ -31,11 +31,22 @@ export default function ClientFindFreelancers() {
   const toggleSkill = s => setSkillFilters(p => p.includes(s) ? p.filter(x => x !== s) : [...p, s]);
 
   const filtered = freelancers.filter(f => {
-    if (search && !f.name?.toLowerCase().includes(search.toLowerCase()) &&
-        !f.skills?.some(s => s.toLowerCase().includes(search.toLowerCase()))) return false;
-    if (minRate && (f.hourlyRate || 0) < Number(minRate)) return false;
-    if (maxRate && (f.hourlyRate || 0) > Number(maxRate)) return false;
-    if (skillFilters.length > 0 && !skillFilters.some(s => f.skills?.includes(s))) return false;
+    if (search) {
+      const q = search.toLowerCase();
+      const matchName = f.name && typeof f.name === "string" && f.name.toLowerCase().includes(q);
+      const matchBio = f.bio && typeof f.bio === "string" && f.bio.toLowerCase().includes(q);
+      const matchSkill = f.skills && Array.isArray(f.skills) && f.skills.some(s => s && typeof s === "string" && s.toLowerCase().includes(q));
+      if (!matchName && !matchBio && !matchSkill) return false;
+    }
+    
+    if (minRate !== "" || maxRate !== "") {
+      const rate = Number(f.hourlyRate) || 0;
+      if (rate === 0) return false;
+      if (minRate !== "" && rate < Number(minRate)) return false;
+      if (maxRate !== "" && rate > Number(maxRate)) return false;
+    }
+
+    if (skillFilters.length > 0 && !skillFilters.some(sf => f.skills?.some(fs => fs.toLowerCase() === sf.toLowerCase()))) return false;
     if (countrySearch && !f.location?.toLowerCase().includes(countrySearch.toLowerCase())) return false;
     return true;
   });

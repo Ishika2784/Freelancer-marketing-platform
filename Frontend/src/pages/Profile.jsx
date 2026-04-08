@@ -1,8 +1,7 @@
 import { useState, useEffect } from "react";
 import "../styles.css";
-import Navbar from "../components/Navbar";
 import { useToast } from "../components/Toast";
-import axios from "axios";
+import { api } from "../utils/api";
 
 export default function Profile() {
   const [user, setUser] = useState(null);
@@ -17,10 +16,7 @@ export default function Profile() {
 
   const fetchProfile = async () => {
     try {
-      const token = localStorage.getItem("token");
-      const res = await axios.get("http://localhost:5000/api/auth/me", {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get("/auth/me");
       setUser(res.data); setName(res.data.name || ""); setBio(res.data.bio || "");
       setLocation(res.data.location || ""); setYearsOfExperience(res.data.yearsOfExperience || "");
       setHourlyRate(res.data.hourlyRate || "");
@@ -53,10 +49,7 @@ export default function Profile() {
         payload.hourlyRate = hourlyRate ? Number(hourlyRate) : 0;
       }
 
-      const token = localStorage.getItem("token");
-      await axios.put("http://localhost:5000/api/user/profile", payload, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.put("/user/profile", payload);
       await fetchProfile(); toast("Profile updated successfully!"); setIsEditing(false);
     } catch (e) { 
       console.error("Backend Error Details:", e.response?.data || e.message); 
@@ -69,7 +62,6 @@ export default function Profile() {
 
   return (
     <div className="dashboard">
-      <Navbar user={user} />
       <div className="w-profile-wrap">
         <div className="w-profile-card">
           <div className="w-profile-cover" />

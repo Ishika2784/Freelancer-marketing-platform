@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import "../styles.css";
-import Navbar from "../components/Navbar";
 import { useToast } from "../components/Toast";
 import { api } from "../utils/api";
 
@@ -57,12 +56,11 @@ export default function PostJob() {
 
   const addSuggestion = (s) => {
     const current = form.skills ? form.skills.split(",").map(x=>x.trim()).filter(Boolean) : [];
-    if (!current.includes(s)) setForm({ ...form, skills: [...current, s].join(", ") });
+    if (!current.some(x => x.toLowerCase() === s.toLowerCase())) setForm({ ...form, skills: [...current, s].join(", ") });
   };
 
   return (
     <div className="dashboard">
-      <Navbar user={user} />
       <div className="container" style={{maxWidth:760}}>
         <div className="page-header">
           <h2>Post a New Job</h2>

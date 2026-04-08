@@ -18,6 +18,8 @@ export default function ClientMyJobs() {
   const [editForm, setEditForm]       = useState({ title: "", description: "", budget: "", skills: "" });
   const [deleteTarget, setDelete]     = useState(null);
   const [saving, setSaving]           = useState(false);
+  const [rateModal, setRateModal]     = useState(null);
+  const [rating, setRating]           = useState(5);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -77,12 +79,39 @@ export default function ClientMyJobs() {
     finally { setLoadingA(p => ({ ...p, [id]: false })); }
   };
 
+  const handleSubmitRating = async () => {
+    try {
+      await api.post(`/jobs/${rateModal.jobId}/rate`, { freelancerId: rateModal.freelancerId, rating });
+      toast("Freelancer rated successfully! 🎉");
+      setRateModal(null);
+      await load();
+    } catch (e) { toast(e.response?.data?.message || "Failed to submit rating", "error"); }
+  };
+
   const isPro = user?.plan === "pro";
 
   if (loading) return <div style={{ textAlign: "center", padding: 60, color: "#94a3b8" }}>Loading…</div>;
 
   return (
     <>
+      {rateModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,0.45)", zIndex:9000, display:"flex", alignItems:"center", justifyContent:"center", padding:20 }}>
+          <div style={{ background:"#fff", borderRadius:18, padding:"32px 36px", maxWidth:400, width:"100%", boxShadow:"0 20px 60px rgba(0,0,0,0.2)", textAlign:"center" }}>
+            <div style={{fontSize:"2.5rem", marginBottom:12}}>⭐</div>
+            <h3 style={{fontSize:"1.1rem", fontWeight:800, color:"#1a1a2e", margin:"0 0 10px"}}>Rate {rateModal.name}</h3>
+            <p style={{fontSize:13.5, color:"#64748b", margin:"0 0 24px"}}>How was your experience working with this freelancer?</p>
+            <div style={{display:"flex", justifyContent:"center", gap:8, marginBottom:24, fontSize:36, cursor:"pointer"}}>
+              {[1,2,3,4,5].map(star => (
+                <span key={star} onClick={() => setRating(star)} style={{ color: star <= rating ? "#f59e0b" : "#e2e8f0" }}>★</span>
+              ))}
+            </div>
+            <div style={{display:"flex", gap:10, justifyContent:"center"}}>
+              <button onClick={() => setRateModal(null)} style={{ padding:"10px 24px", borderRadius:10, border:"1.5px solid #e2e8f0", background:"#fff", color:"#475569", fontWeight:600, fontSize:14, cursor:"pointer" }}>Cancel</button>
+              <button onClick={handleSubmitRating} style={{ padding:"10px 24px", borderRadius:10, border:"none", background:"#f97316", color:"#fff", fontWeight:700, fontSize:14, cursor:"pointer" }}>Submit Rating</button>
+            </div>
+          </div>
+        </div>
+      )}
       {deleteTarget && (
         <ConfirmModal message="Delete this job posting?" onConfirm={handleDelete} onCancel={() => setDelete(null)} />
       )}
@@ -225,9 +254,18 @@ export default function ClientMyJobs() {
                       {new Date(a.appliedAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
                     </div>
                     {a.status === "hired" ? (
-                      <span style={{ background: "#f0fdf4", color: "#15803d", border: "1px solid #bbf7d0", padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 700 }}>
-                        ✅ Hired
+                    <div style={{ display: "flex", flexDirection: "column", gap: 6, alignItems: "flex-end" }}>
+                      <span style={{ background: job.status === "completed" ? "#eff6ff" : "#f0fdf4", color: job.status === "completed" ? "#1d4ed8" : "#15803d", border: `1px solid ${job.status === "completed" ? "#bfdbfe" : "#bbf7d0"}`, padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 700 }}>
+                        {job.status === "completed" ? "🏆 Completed" : "✅ Hired"}
                       </span>
+                      {job.status !== "completed" && (
+                        <button className="btn btn-sm"
+                          style={{ background: "#fffbeb", color: "#b45309", border: "1.5px solid #fde68a", borderRadius: 100, fontWeight: 700, padding: "3px 10px", fontSize: 11 }}
+                          onClick={() => { setRating(5); setRateModal({ jobId: job._id, freelancerId: a.freelancer._id, name: a.freelancer.name }); }}>
+                          ⭐ Rate & Complete
+                        </button>
+                      )}
+                    </div>
                     ) : a.status === "rejected" ? (
                       <span style={{ background: "#fff1f2", color: "#be123c", border: "1px solid #fecdd3", padding: "3px 10px", borderRadius: 100, fontSize: 11, fontWeight: 700 }}>
                         Not Selected

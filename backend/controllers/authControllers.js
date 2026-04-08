@@ -1,8 +1,8 @@
 const User = require('../models/User');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
-const redis = require ('../utils/redisClient');
-const axios = require('axios');
+const redis = require('../utils/redisClient');
+const { sendOtpEmail } = require('../utils/sendOtpEmail');
 require('dotenv').config();
 
 exports.sendOtp = async (req, res) => {
@@ -31,20 +31,9 @@ exports.sendOtp = async (req, res) => {
         
         const otp = Math.floor(100000 + Math.random() * 900000);
         await redis.set(key, otp, 'EX', 30);
-        await redis.set(`cooldown:${email}`, 'true', 'EX', 60);
+        await redis.set(`cooldown:${email}`, 'true', 'EX', 15);
 
-        await axios.post("https://api.brevo.com/v3/smtp/email", {
-            sender: { email: "ishika2784@gmail.com" },
-            to: [{ email }],
-            subject: "Your OTP for verification",
-            htmlContent: `<p>Your OTP is: <strong>${otp}</strong></p>`
-        }, {
-            headers: {
-                'api-key': process.env.BREVO_API_KEY,
-                'Content-Type': 'application/json'
-            }
-        });
-
+        await sendOtpEmail(email, otp);
         res.status(200).json({ message: 'OTP sent successfully' });
 
     } catch (error) {
