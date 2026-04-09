@@ -39,8 +39,8 @@ export default function Login() {
       localStorage.setItem("role", user.role);
       toast(`Welcome back, ${user.name || "User"}! `);
       setTimeout(() => {
-        if (user.role === "client") navigate(user.plan === "pro" || user.plan === "free" ? "/client/dashboard" : "/pricing");
-        else if (user.role === "freelancer") navigate("/freelancer/dashboard");
+        if (user.role === "client") navigate(user.plan === "pro" || user.plan === "free" ? "/client/dashboard" : "/pricing", { replace: true });
+        else if (user.role === "freelancer") navigate("/freelancer/dashboard", { replace: true });
       }, 800);
     } catch (err) {
       toast(err.response?.data?.message || "Wrong credentials", "error");

@@ -1,4 +1,4 @@
-﻿﻿﻿﻿import { useEffect, useState } from "react";
+﻿import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import "../styles.css";
@@ -24,10 +24,22 @@ export default function MyJobs() {
       const token = localStorage.getItem("token");
       try {
         const [uRes, jRes] = await Promise.all([
-          axios.get("http://localhost:5000/api/auth/me", { headers: { Authorization: `Bearer ${token}` } }),
-          axios.get("http://localhost:5000/api/jobs/my", { headers: { Authorization: `Bearer ${token}` } }),
+          axios.get("http://localhost:5000/api/auth/me",
+             { headers:
+               { 
+              Authorization: `Bearer ${token}`
+             } 
+            }),
+          axios.get("http://localhost:5000/api/jobs/my",
+             {
+               headers:
+                {
+                   Authorization: `Bearer ${token}`
+                   }
+                   }),
         ]);
-        setUser(uRes.data); setJobs(jRes.data);
+        setUser(uRes.data);
+         setJobs(jRes.data);
       } catch(e) { toast("Failed to load jobs","error"); }
       finally { setLoading(false); }
     };
@@ -66,10 +78,21 @@ export default function MyJobs() {
     setLoadingMatches(p=>({...p,[id]:true}));
     try {
       const token = localStorage.getItem("token");
-      const res = await axios.get(`http://localhost:5000/api/jobs/${id}/matches`, { headers:{ Authorization:`Bearer ${token}` } });
+      const res = await axios.get(`http://localhost:5000/api/jobs/${id}/matches`, 
+        {
+           headers:{
+             Authorization:`Bearer ${token}` 
+            } 
+          });
       setMatches(p=>({...p,[id]:res.data}));
-    } catch(e) { toast(e.response?.data?.message||"AI match failed","error"); }
-    finally { setLoadingMatches(p=>({...p,[id]:false})); }
+    } 
+    catch(e) 
+    {
+       toast(e.response?.data?.message||"AI match failed","error"); 
+      }
+    finally { 
+      setLoadingMatches(p=>({...p,[id]:false})); 
+    }
   };
 
   if (loading) return <div className="w-loading">Loading your jobs...</div>;

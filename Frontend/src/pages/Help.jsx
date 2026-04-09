@@ -1,5 +1,4 @@
 import { useState } from "react";
-import PublicNav from "../components/PublicNav";
 import "../styles.css";
 
 const FAQS = [
@@ -33,7 +32,6 @@ export default function Help() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
-      <PublicNav />
       <div style={{ background: "linear-gradient(135deg,#1a1a2e,#2d2d4e)", padding: "70px 24px", textAlign: "center" }}>
         <h1 style={{ fontSize: "clamp(2rem,5vw,3rem)", fontWeight: 900, color: "#fff", marginBottom: 16 }}>Help Center</h1>
         <p style={{ color: "rgba(255,255,255,0.6)", fontSize: 16, marginBottom: 28 }}>How can we help you today?</p>

@@ -5,10 +5,14 @@ import { api } from "../utils/api";
 
 export default function Profile() {
   const [user, setUser] = useState(null);
-  const [name, setName] = useState(""); const [skills, setSkills] = useState("");
-  const [bio, setBio] = useState(""); const [location, setLocation] = useState("");
-  const [yearsOfExperience, setYearsOfExperience] = useState(""); const [hourlyRate, setHourlyRate] = useState("");
-  const [loading, setLoading] = useState(true); const [updating, setUpdating] = useState(false);
+  const [name, setName] = useState(""); 
+  const [skills, setSkills] = useState("");
+  const [bio, setBio] = useState(""); 
+  const [location, setLocation] = useState("");
+  const [yearsOfExperience, setYearsOfExperience] = useState(""); 
+  const [hourlyRate, setHourlyRate] = useState("");
+  const [loading, setLoading] = useState(true); 
+  const [updating, setUpdating] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const toast = useToast();
 
@@ -17,17 +21,28 @@ export default function Profile() {
   const fetchProfile = async () => {
     try {
       const res = await api.get("/auth/me");
-      setUser(res.data); setName(res.data.name || ""); setBio(res.data.bio || "");
-      setLocation(res.data.location || ""); setYearsOfExperience(res.data.yearsOfExperience || "");
+      setUser(res.data); setName(res.data.name || ""); 
+      setBio(res.data.bio || "");
+      setLocation(res.data.location || ""); 
+      setYearsOfExperience(res.data.yearsOfExperience || "");
       setHourlyRate(res.data.hourlyRate || "");
       if (res.data.skills) setSkills(res.data.skills.join(", "));
-    } catch (e) { console.error(e); } finally { setLoading(false); }
+    } catch (e) { 
+      console.error(e);
+     } 
+      finally { 
+        setLoading(false); 
+      }
   };
 
   const handleCancel = () => {
-    setName(user?.name||""); setBio(user?.bio||""); setLocation(user?.location||"");
-    setYearsOfExperience(user?.yearsOfExperience||""); setHourlyRate(user?.hourlyRate||"");
-    setSkills(user?.skills ? user.skills.join(", ") : ""); setIsEditing(false);
+    setName(user?.name||""); 
+    setBio(user?.bio||""); 
+    setLocation(user?.location||"");
+    setYearsOfExperience(user?.yearsOfExperience||""); 
+    setHourlyRate(user?.hourlyRate||"");
+    setSkills(user?.skills ? user.skills.join(", ") : ""); 
+    setIsEditing(false);
   };
 
   const handleUpdate = async () => {
@@ -50,7 +65,9 @@ export default function Profile() {
       }
 
       await api.put("/user/profile", payload);
-      await fetchProfile(); toast("Profile updated successfully!"); setIsEditing(false);
+      await fetchProfile(); 
+      toast("Profile updated successfully!"); 
+      setIsEditing(false);
     } catch (e) { 
       console.error("Backend Error Details:", e.response?.data || e.message); 
       toast(e.response?.data?.message || "Server Error: Check console for details", "error"); 

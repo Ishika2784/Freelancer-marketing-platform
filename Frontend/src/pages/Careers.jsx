@@ -1,5 +1,4 @@
 import { useNavigate } from "react-router-dom";
-import PublicNav from "../components/PublicNav";
 import "../styles.css";
 
 const OPENINGS = [
@@ -24,7 +23,6 @@ export default function Careers() {
   const navigate = useNavigate();
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
-      <PublicNav />
       <div style={{ background: "linear-gradient(135deg,#1a1a2e,#2d2d4e)", padding: "80px 24px", textAlign: "center" }}>
         <div style={{ fontSize: 13, color: "#f97316", fontWeight: 700, letterSpacing: 2, marginBottom: 12 }}>WE'RE HIRING</div>
         <h1 style={{ fontSize: "clamp(2rem,5vw,3.5rem)", fontWeight: 900, color: "#fff", marginBottom: 16 }}>Build the future of work</h1>

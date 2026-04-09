@@ -12,7 +12,6 @@ const Dashboard3D = () => {
         <pointLight position={[10, 10, 10]} />
         <OrbitControls enableZoom={false} />
         <FloatingButton />
-        {/* Add 3D components here */}
       </Canvas>
       <motion.div
         className="absolute top-0 left-0 w-full h-full"

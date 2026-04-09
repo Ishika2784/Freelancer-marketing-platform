@@ -1,6 +1,7 @@
 const Job = require("../models/Job");
 const User = require("../models/User");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
+const redis = require("../utils/redisClient");
 
 exports.createJob = async (req, res) => {
     try {
@@ -32,10 +33,10 @@ exports.createJob = async (req, res) => {
 };
 
 
-exports.getAllJobs = async (req, res) => {
+exports.getAllJobs = async (req, res) => {//freelancer dashboard
     try {
         const jobs = await Job.find()
-            .populate("client", "name email") // show client info
+            .populate("client", "name email")
             .sort({ createdAt: -1 });
 
         res.json(jobs);
@@ -152,6 +153,13 @@ exports.applyToJob = async (req, res) => {
         job.applicants.push({ freelancer: req.user.userId });
         await job.save();
 
+        // Clear the AI match cache so this new applicant can be considered
+        try {
+            await redis.del(`ai_matches:${job._id}`);
+        } catch (err) {
+            console.error("Redis cache invalidation error:", err);
+        }
+
         res.json({ message: "Applied successfully" });
     } catch (error) {
         res.status(500).json({ message: "Server error" });
@@ -181,7 +189,7 @@ exports.getJobMatches = async (req, res) => {
             return res.status(403).json({ message: "AI matching is only available for Pro plan users." });
         }
 
-        const job = await Job.findById(req.params.id);
+        const job = await Job.findById(req.params.id).populate("applicants.freelancer", "name skills hourlyRate");
         
         if (!job) {
             return res.status(404).json({ message: "Job not found" });
@@ -191,16 +199,32 @@ exports.getJobMatches = async (req, res) => {
             return res.json([]); // No skills to match against
         }
 
-        // Fetch all freelancers to provide to Gemini
-        const freelancers = await User.find({ role: "freelancer" }).select("name skills hourlyRate");
+        // --- REDIS CACHING LOGIC ---
+        // Check if a recent, cached result exists in Redis
+        const cacheKey = `ai_matches:${job._id}`;
+        try {
+            const cachedMatch = await redis.get(cacheKey);
+            // Ignore cache if the request specifically asks to refresh
+            if (cachedMatch && req.query.refresh !== 'true') {
+                console.log(`[Cache Hit] Serving old AI matches from Redis for job: ${job._id}`);
+                return res.json({ ai_response: cachedMatch, from_cache: true });
+            }
+        } catch (err) {
+            console.error("Redis cache error:", err);
+        }
+
+        // Extract freelancers from job applicants
+        const freelancers = job.applicants
+            .map(a => a.freelancer)
+            .filter(Boolean); // Filters out any null/undefined values
         
         if (freelancers.length === 0) {
-            return res.json({ ai_response: "No freelancers available on the platform yet." });
+            return res.json({ ai_response: "No freelancers have applied to this job yet.", from_cache: false });
         }
 
         // Format the freelancer data for the prompt
         const freelancerList = freelancers.map(f => 
-            `Name: ${f.name}\nSkills: ${f.skills.join(", ")}\nHourly Rate: ${f.hourlyRate ? f.hourlyRate + ' INR' : 'Not specified'}`
+            `Name: ${f.name}\nSkills: ${f.skills ? f.skills.join(", ") : "Not specified"}\nHourly Rate: ${f.hourlyRate ? f.hourlyRate + ' INR' : 'Not specified'}`
         ).join("\n\n");
 
         const prompt = `You are an AI assistant for a freelancer marketplace platform.
@@ -208,12 +232,13 @@ exports.getJobMatches = async (req, res) => {
 Your task is to intelligently match the best freelancers to a given job.
 
 Instructions:
-* Carefully understand the job requirements, including title, description, and required skills.
+* Carefully understand the job requirements, including title, description, required skills, and budget.
 * Compare freelancers based on:
   * Skill relevance
   * Experience (if mentioned)
+  * Budget fit (compare the job's budget with the freelancer's hourly rate)
   * Overall suitability for the job
-* Prioritize freelancers whose skills closely match or are related to the job requirements.
+* Prioritize freelancers whose skills closely match or are related to the job requirements AND whose hourly rate aligns reasonably well with the job budget.
 * Even if exact keywords do not match, use logical understanding (e.g., MERN = MongoDB, Express, React, Node).
 * Return ONLY the top 3 most relevant freelancers.
 * Keep explanations short and clear.
@@ -221,6 +246,7 @@ Instructions:
 Job Details:
 Title: ${job.title}
 Description: ${job.description}
+Budget: ${job.budget}
 Required Skills: ${job.skills.join(", ")}
 
 Freelancers:
@@ -229,18 +255,21 @@ ${freelancerList}
 Output format:
 1. Name: <freelancer name>
    Skills: <skills>
+   Hourly Rate: <hourly rate>
    Match Score: <High/Medium/Low>
-   Reason: <why this freelancer is a good match>
+   Reason: <why this freelancer is a good match, specifically mentioning their skill fit AND how their rate compares to the ${job.budget} budget>
 
 2. Name: <freelancer name>
    Skills: <skills>
+   Hourly Rate: <hourly rate>
    Match Score: <High/Medium/Low>
-   Reason: <short explanation>
+   Reason: <short explanation including budget fit>
 
 3. Name: <freelancer name>
    Skills: <skills>
+   Hourly Rate: <hourly rate>
    Match Score: <High/Medium/Low>
-   Reason: <short explanation>`;
+   Reason: <short explanation including budget fit>`;
 
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });
@@ -248,7 +277,14 @@ Output format:
         const result = await model.generateContent(prompt);
         const responseText = result.response.text();
 
-        res.json({ ai_response: responseText });
+        // Save the new response to Redis for caching (expires in 24 hours = 86400s)
+        try {
+            await redis.set(cacheKey, responseText, 'EX', 86400);
+        } catch (err) {
+            console.error("Redis save error:", err);
+        }
+
+        res.json({ ai_response: responseText, from_cache: false });
     } catch (error) {
         console.error(error);
         if (error.status === 429) {

@@ -5,22 +5,22 @@ import { useToast } from "../../components/Toast";
 
 const SKILL_SUGGESTIONS = [
   "React", "Node.js", "MongoDB", "Python", "Figma",
-  "WordPress", "Flutter", "TypeScript", "AWS", "GraphQL",
+  "WordPress", "Flutter", "UI/UX", "TypeScript", "AWS", "GraphQL",
 ];
 
 export default function ClientPostJob() {
-  const navigate    = useNavigate();
-  const toast       = useToast();
-  const [form, setForm] = useState({ title: "", description: "", budget: "", skills: "", type: "fixed", deadline: "" });
-  const [errors, setErrors]     = useState({});
+  const navigate = useNavigate();
+  const toast = useToast();
+  const [form, setForm] = useState({ title: "", description: "", budget: "", skills: "", type: "fixed" });
+  const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
   const validate = () => {
     const e = {};
-    if (!form.title.trim())                              e.title       = "Title is required";
+    if (!form.title.trim())   e.title       = "Title is required";
     if (!form.description.trim() || form.description.length < 20) e.description = "Min 20 characters";
-    if (!form.budget || Number(form.budget) <= 0)        e.budget      = "Enter a valid budget";
-    if (!form.skills.trim())                             e.skills      = "Add at least one skill";
+    if (!form.budget || Number(form.budget) <= 0)  e.budget      = "Enter a valid budget";
+    if (!form.skills.trim())   e.skills      = "Add at least one skill";
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -32,7 +32,7 @@ export default function ClientPostJob() {
 
   const addSkill = s => {
     const cur = form.skills ? form.skills.split(",").map(x => x.trim()).filter(Boolean) : [];
-    if (!cur.includes(s)) setForm(f => ({ ...f, skills: [...cur, s].join(", ") }));
+    if (!cur.some(x => x.toLowerCase() === s.toLowerCase())) setForm(f => ({ ...f, skills: [...cur, s].join(", ") }));
   };
 
   const handleSubmit = async () => {
@@ -91,14 +91,6 @@ export default function ClientPostJob() {
               <option value="hourly">Hourly Rate</option>
             </select>
           </div>
-        </div>
-
-        {/* Skills */}
-        <div className="pj-field">
-          <label className="pj-label">Application Deadline</label>
-          <input name="deadline" type="date" value={form.deadline} onChange={handleChange}
-            min={new Date().toISOString().split("T")[0]}
-            style={{ width: "100%", padding: "13px 16px", border: "1.5px solid #e2e8f0", borderRadius: 10, fontSize: 14, outline: "none", boxSizing: "border-box" }} />
         </div>
 
         {/* Skills */}

@@ -16,6 +16,7 @@ import Help               from "./pages/Help";
 import Blog               from "./pages/Blog";
 import Events             from "./pages/Events";  
 import Learn              from "./pages/Learn"; 
+
 const P = (C, props = {}) => <ProtectedRoute><C {...props} /></ProtectedRoute>;
 const routes = [
   { path: "/", element: <Home /> },
@@ -32,7 +33,6 @@ const routes = [
   { path: "/client/*", element: <Navigate to="/client/dashboard" replace /> },
   { path: "/freelancer/dashboard", element: P(FreelancerDashboard, { page: "overview"  }) },
   { path: "/freelancer/find-project", element: P(FreelancerDashboard, { page: "find"      }) },
-  { path: "/freelancer/companies",element: P(FreelancerDashboard, { page: "companies" }) },
   { path: "/freelancer/proposals",element: P(FreelancerDashboard, { page: "proposals" }) },
   
   { path: "/careers", element: <Careers /> },

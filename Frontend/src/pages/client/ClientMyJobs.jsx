@@ -54,11 +54,11 @@ export default function ClientMyJobs() {
     finally { setSaving(false); }
   };
 
-  const fetchMatches = async id => {
-    if (matches[id]) { setMatches(p => { const n = { ...p }; delete n[id]; return n; }); return; }
+  const fetchMatches = async (id, forceRefresh = false) => {
+    if (matches[id] && !forceRefresh) { setMatches(p => { const n = { ...p }; delete n[id]; return n; }); return; }
     setLoadingM(p => ({ ...p, [id]: true }));
     try {
-      const res = await api.get(`/jobs/${id}/matches`);
+      const res = await api.get(forceRefresh ? `/jobs/${id}/matches?refresh=true` : `/jobs/${id}/matches`);
       setMatches(p => ({ ...p, [id]: res.data }));
     } catch (e) { 
       toast(e.response?.data?.message || "AI match failed", "error"); 
@@ -81,8 +81,9 @@ export default function ClientMyJobs() {
 
   const handleSubmitRating = async () => {
     try {
-      await api.post(`/jobs/${rateModal.jobId}/rate`, { freelancerId: rateModal.freelancerId, rating });
-      toast("Freelancer rated successfully! 🎉");
+      await api.post(`/jobs/${rateModal.jobId}/rate`, 
+        { freelancerId: rateModal.freelancerId, rating });
+      toast("Freelancer rated successfully");
       setRateModal(null);
       await load();
     } catch (e) { toast(e.response?.data?.message || "Failed to submit rating", "error"); }
@@ -222,7 +223,12 @@ export default function ClientMyJobs() {
           )}
           {matches[job._id] && (
             <div className="w-matches-section">
-              <h4>✨ Gemini AI Matches</h4>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <h4 style={{ margin: 0 }}>✨ Gemini AI Matches</h4>
+                <button className="btn btn-sm" style={{ background: "#f8fafc", color: "#475569", border: "1px solid #e2e8f0", borderRadius: 100, fontSize: 12 }} onClick={() => fetchMatches(job._id, true)}>
+                  🔄 Refresh Matches
+                </button>
+              </div>
               {matches[job._id].ai_response
                 ? <div className="w-ai-response">{matches[job._id].ai_response}</div>
                 : <p style={{ color: "#94a3b8", fontSize: 13 }}>No matches generated.</p>}

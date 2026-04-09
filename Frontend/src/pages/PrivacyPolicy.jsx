@@ -1,5 +1,4 @@
 import "../styles.css";
-import PublicNav from "../components/PublicNav";
 
 const SECTIONS = [
   { title: "Information We Collect", content: "We collect information you provide directly — name, email, skills, and profile details. We also collect usage data such as pages visited, features used, and device information to improve our platform." },
@@ -15,7 +14,6 @@ const SECTIONS = [
 export default function PrivacyPolicy() {
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
-      <PublicNav />
       <div style={{ background: "linear-gradient(135deg,#1a1a2e,#2d2d4e)", padding: "60px 24px", textAlign: "center" }}>
         <h1 style={{ fontSize: "clamp(1.8rem,4vw,3rem)", fontWeight: 900, color: "#fff", marginBottom: 12 }}>Privacy Policy</h1>
         <p style={{ color: "rgba(255,255,255,0.5)", fontSize: 14 }}>Last updated: April 2026</p>

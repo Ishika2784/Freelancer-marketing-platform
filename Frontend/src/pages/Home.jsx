@@ -3,6 +3,89 @@ import { useState, useEffect } from "react";
 import "../styles.css";
 import { storage } from "../utils/storage";
 import axios from "axios";
+import { useToast } from "../components/Toast";
+import PublicNav from "../components/PublicNav";
+
+const PLANS = [
+  { key: "free", name: "Free", price: "₹0", period: "INR / month", tagline: "See what AI can do", current: true, btnLabel: "Your current plan", btnStyle: "gpt2-btn-ghost",
+    features: ["Get simple explanations","Have short chats for common questions","Try out basic job matching","Save limited memory and context"] },
+  { key: "starter", name: "Go", price: "₹299", period: "INR / month (inclusive of GST)", tagline: "Keep hiring with expanded access", btnLabel: "Upgrade to Go", btnStyle: "gpt2-btn-outline",
+    features: ["Explore freelancers in depth","Post more jobs and upload more content","Make more AI matches for your projects","Get more memory for smarter replies","Get help with planning and tasks","Explore projects, tasks, and custom filters"] },
+  ];
+
+function PricingContent({ onClose, navigate }) {
+  const [billing, setBilling] = useState("personal");
+  const [loading, setLoading] = useState(false);
+  const [activePlan, setActivePlan] = useState(null);
+  const toast = useToast();
+
+  const handlePlan = async (plan) => {
+    if (plan === "free" || plan === "starter" || plan === "enterprise") {
+      toast("This plan is coming soon!", "warn"); return;
+    }
+    const token = storage.getToken();
+    if (!token) { toast("Please login first", "warn"); onClose(); navigate("/login"); return; }
+    setLoading(true); setActivePlan(plan);
+    try {
+      const res = await axios.post("http://localhost:5000/api/payment/createorder", { plan: "pro" },
+        { headers: { Authorization: `Bearer ${token}` } });
+      const order = res.data;
+      const key = import.meta.env.VITE_RAZORPAY_KEY_ID;
+      if (!key) { toast("Razorpay key missing!", "error"); return; }
+      new window.Razorpay({
+        key, amount: order.amount, currency: "INR",
+        name: "Freelancer.io", description: "Pro Plan", order_id: order.id,
+        handler: async (response) => {
+          await axios.post("http://localhost:5000/api/payment/verify", { ...response, plan: "pro" },
+            { headers: { Authorization: `Bearer ${token}` } });
+          toast("Payment successful! Pro plan activated. ");
+          onClose();
+          setTimeout(() => navigate("/client/dashboard"), 1000);
+        },
+        modal: { ondismiss: () => toast("Payment cancelled", "warn") },
+      }).open();
+    } catch (e) {
+      toast(e.response?.data?.message || "Something went wrong", "error");
+    } finally { setLoading(false); setActivePlan(null); }
+  };
+
+  const busy = (k) => loading && activePlan === k;
+
+  return (
+    <>
+      <h1 className="gpt2-title">Upgrade your plan</h1>
+      <div className="gpt2-toggle">
+        <button className={`gpt2-toggle-btn ${billing === "personal" ? "active" : ""}`} onClick={() => setBilling("personal")}>Personal</button>
+        <button className={`gpt2-toggle-btn ${billing === "business" ? "active" : ""}`} onClick={() => setBilling("business")}>Business</button>
+      </div>
+      <div className="gpt2-cards">
+        {PLANS.map(plan => (
+          <div key={plan.key} className={`gpt2-card ${plan.popular ? "gpt2-card-popular" : ""}`}>
+            {plan.popular && <span className="gpt2-popular-badge">POPULAR</span>}
+            <div className="gpt2-plan-name">{plan.name}</div>
+            <div className="gpt2-plan-price">
+              <span className="gpt2-price-symbol">₹</span>
+              <span className="gpt2-price-num">{plan.price.replace("₹","")}</span>
+            </div>
+            <div className="gpt2-price-period">{plan.period}</div>
+            <div className="gpt2-plan-tagline">{plan.tagline}</div>
+            {plan.current
+              ? <div className="gpt2-current-label">Your current plan</div>
+              : <button className={`gpt2-btn ${plan.btnStyle}`} onClick={() => handlePlan(plan.key)} disabled={loading}>
+                  {busy(plan.key) ? <span className="gpt2-spinner" /> : plan.btnLabel}
+                </button>}
+            <ul className="gpt2-features">
+              {plan.features.map((f, i) => (
+                <li key={i} className="gpt2-feature"><span className="gpt2-feat-icon">✦</span><span>{f}</span></li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
+      <p className="gpt2-footnote">Prices in INR inclusive of GST · Cancel anytime · Secure payments via Razorpay</p>
+    </>
+  );
+}
 
 const SKILLS = ["UI Designer", "3D Artist", "React Dev", "Copywriter", "Motion Designer", "Full Stack"];
 
@@ -17,12 +100,107 @@ const TESTIMONIALS = [
     text: '"Compared to other platforms, the user-friendly interface and diverse range of projects sets it apart. Highly recommend!"' },
 ];
 
+function PricingModal({ onClose, navigate }) {
+  const [loading, setLoading] = useState(false);
+  const toast = useToast();
+
+  // Lock background scroll when modal is open
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
+  const handleUpgrade = async () => {
+    const token = storage.getToken();
+    if (!token) { toast("Please login first", "warn"); onClose(); navigate("/login"); return; }
+    setLoading(true);
+    try {
+      const res = await axios.post("http://localhost:5000/api/payment/createorder", { plan: "pro" },
+        { headers: { Authorization: `Bearer ${token}` } });
+      const order = res.data;
+      const key = import.meta.env.VITE_RAZORPAY_KEY_ID;
+      if (!key) { toast("Razorpay key missing!", "error"); return; }
+      new window.Razorpay({
+        key, amount: order.amount, currency: "INR",
+        name: "Freelancer.io", description: "Pro Plan", order_id: order.id,
+        handler: async (response) => {
+          await axios.post("http://localhost:5000/api/payment/verify", { ...response, plan: "pro" },
+            { headers: { Authorization: `Bearer ${token}` } });
+          toast("Payment successful! Pro plan activated. 🎉");
+          onClose();
+          setTimeout(() => navigate("/client/dashboard"), 1000);
+        },
+        modal: { ondismiss: () => toast("Payment cancelled", "warn") },
+      }).open();
+    } catch (e) {
+      toast(e.response?.data?.message || "Something went wrong", "error");
+    } finally { setLoading(false); }
+  };
+
+  return (
+    <div onClick={onClose} className="pm-overlay">
+      <div onClick={e => e.stopPropagation()} className="pm-box">
+
+        <button onClick={onClose} className="pm-close">×</button>
+
+        <div className="pm-header">
+          <div className="pm-badge">
+            <span>◈ FREELANCER.IO PLANS</span>
+          </div>
+          <h2 className="pm-title">Unlock your potential</h2>
+          <p className="pm-sub">Simple pricing · No hidden fees · Cancel anytime</p>
+        </div>
+
+        <div className="pm-cards">
+          {/* FREE */}
+          <div className="pm-card pm-card-free">
+            <div className="pm-plan-label-free">FREE</div>
+            <div className="pm-price">₹0</div>
+            <div className="pm-period-free">per month, forever</div>
+            <div className="pm-divider-free">
+              {["Limited access", "Basic features", "Profile listings"].map((f, i) => (
+                <div key={i} className="pm-feature">
+                  <span style={{color:"#64748b",fontSize:13,flexShrink:0,marginTop:1,fontWeight:700}}>{"\u2713"}</span>
+                  <span className="pm-feat-text-free">{f}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={onClose} className="pm-btn-free">Continue Free</button>
+          </div>
+
+          {/* PRO */}
+          <div className="pm-card pm-card-pro">
+            <span className="pm-popular-badge">⭐ Most Popular</span>
+            <div className="pm-plan-label-pro">PRO</div>
+            <div className="pm-price">₹299</div>
+            <div className="pm-period-pro">per month, billed monthly</div>
+            <div className="pm-divider-pro">
+              {["Unlimited access", "Priority support", "Better visibility", "AI Matching"].map((f, i) => (
+                <div key={i} className="pm-feature">
+                  <span style={{color:"#f97316",fontSize:13,flexShrink:0,marginTop:1,fontWeight:700}}>{"\u2713"}</span>
+                  <span className="pm-feat-text-pro">{f}</span>
+                </div>
+              ))}
+            </div>
+            <button onClick={handleUpgrade} disabled={loading} className="pm-btn-pro">
+              {loading ? "Processing…" : "Upgrade Now →"}
+            </button>
+          </div>
+        </div>
+
+        <p className="pm-footnote">Prices in INR inclusive of GST · Secure payments via Razorpay</p>
+      </div>
+    </div>
+  );
+}
+
 export default function Home() {
   const navigate = useNavigate();
   const isLoggedIn = storage.isLoggedIn() || !!localStorage.getItem("token");
   const userRole   = storage.getRole() || localStorage.getItem("role");
   const [email, setEmail] = useState("");
   const [showBanner, setShowBanner] = useState(true);
+  const [showPricingModal, setShowPricingModal] = useState(false);
 
   useEffect(() => {
     if (isLoggedIn) {
@@ -60,32 +238,7 @@ export default function Home() {
       )}
 
       {/* ── NAVBAR ── */}
-      <nav className="nav">
-        <div className="navlogo">
-          <span className="navlogo-icon">◈</span>
-          Freelancer.io
-        </div>
-        <div className="navlinks">
-          <a href="#features" onClick={e => { e.preventDefault(); document.querySelector('.features-strip')?.scrollIntoView({ behavior: 'smooth' }); }}>Find Talent</a>
-          <a href="#" onClick={e => { e.preventDefault(); navigate(isLoggedIn ? (userRole === 'freelancer' ? '/freelancer/find-project' : '/register') : '/register'); }}>Find Work</a>
-          <a href="#why" onClick={e => { e.preventDefault(); document.querySelector('.connect')?.scrollIntoView({ behavior: 'smooth' }); }}>Why Us</a>
-          <a href="#" onClick={e => { e.preventDefault(); navigate('/pricing'); }}>Enterprise</a>
-        </div>
-        <div className="nav-actions">
-          {isLoggedIn ? (
-            <>
-              <button className="btn btn-coral" onClick={toDashboard}>Dashboard</button>
-              <button className="btn-ghost" onClick={handleLogout}>Logout</button>
-            </>
-          ) : (
-            <>
-              <button className="btn-ghost" onClick={() => navigate("/login")}>Log In</button>
-              <button className="btn btn-coral" onClick={() => navigate("/register")}>Sign Up</button>
-            </>
-          )}
-        </div>
-        <button className="hamburger">☰</button>
-      </nav>
+      <PublicNav onOpenPricing={() => setShowPricingModal(true)} />
 
       {/* ── HERO ── */}
       <section className="hero">
@@ -296,16 +449,16 @@ export default function Home() {
           <div className="footer-col">
             <div className="footer-col-title">ABOUT</div>
             <Link className="footer-link" to="/careers">Careers</Link>
-            <Link className="footer-link" to="/blog">Press & News</Link>
-            <Link className="footer-link" to="/blog">Partnerships</Link>
+            <Link className="footer-link" >Press & News</Link>
+            <Link className="footer-link" >Partnerships</Link>
             <Link className="footer-link" to="/privacy">Privacy Policy</Link>
           </div>
           <div className="footer-col">
             <div className="footer-col-title">COMMUNITY</div>
-            <Link className="footer-link" to="/help">Forum</Link>
-            <Link className="footer-link" to="/events">Events</Link>
+            <Link className="footer-link" >Forum</Link>
+            <Link className="footer-link" >Events</Link>
             <Link className="footer-link" to="/blog">Blog</Link>
-            <Link className="footer-link" to="/learn">Podcasts</Link>
+            <Link className="footer-link" >Podcasts</Link>
           </div>
           <div className="footer-col">
             <div className="footer-col-title">SUPPORT</div>
@@ -318,6 +471,13 @@ export default function Home() {
         </div>
       </footer>
 
+      {/* ── ENTERPRISE / PRICING MODAL ── */}
+      {showPricingModal && (
+        <PricingModal onClose={() => setShowPricingModal(false)} navigate={navigate} />
+      )}
+
     </div>
   );
 }
+
+

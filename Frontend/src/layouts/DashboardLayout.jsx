@@ -4,19 +4,11 @@ import { storage } from "../utils/storage";
 import { SettingsIcon, SignOutIcon } from "../components/NavIcons";
 import "../styles.css";
 
-/**
- * Shared sidebar layout for both Client and Freelancer dashboards.
- * Props:
- *   user       — current user object
- *   navItems   — [{ key, label, icon(isActive), path }]
- *   planCard   — optional JSX rendered at bottom of sidebar (clients only)
- */
 export default function DashboardLayout({ user, navItems, planCard, children }) {
   const navigate = useNavigate();
   const location = useLocation();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
-  // Close sidebar on route change (mobile)
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
   const handleLogout = () => {
@@ -33,7 +25,7 @@ export default function DashboardLayout({ user, navItems, planCard, children }) 
       {/* ── SIDEBAR ── */}
       <aside className={`prl-sidebar ${sidebarOpen ? "open" : ""}`}>
         {/* Logo */}
-        <div className="prl-logo">
+        <div className="prl-logo" onClick={() => navigate("/")} style={{ cursor: "pointer" }}>
           <span className="prl-logo-icon">◈</span>
           <span className="prl-logo-text">Freelancer.io</span>
         </div>

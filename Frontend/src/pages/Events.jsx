@@ -1,5 +1,4 @@
 import "../styles.css";
-import PublicNav from "../components/PublicNav";
 
 const EVENTS = [
   { type: "Webinar", title: "How to Price Your Freelance Services in 2026", date: "Apr 15, 2026", time: "7:00 PM IST", host: "Priya Sharma", spots: 120, registered: 89, icon: "🎙️" },
@@ -21,7 +20,6 @@ const TYPE_COLORS = {
 export default function Events() {
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
-      <PublicNav />
       <div style={{ background: "linear-gradient(135deg,#1a1a2e,#2d2d4e)", padding: "70px 24px", textAlign: "center" }}>
         <div style={{ fontSize: 13, color: "#f97316", fontWeight: 700, letterSpacing: 2, marginBottom: 12 }}>COMMUNITY</div>
         <h1 style={{ fontSize: "clamp(2rem,5vw,3rem)", fontWeight: 900, color: "#fff", marginBottom: 16 }}>Events & Webinars</h1>

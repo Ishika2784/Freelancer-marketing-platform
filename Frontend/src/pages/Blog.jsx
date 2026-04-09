@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import PublicNav from "../components/PublicNav";
 import "../styles.css";
 
 const POSTS = [
@@ -22,7 +21,6 @@ export default function Blog() {
 
   return (
     <div style={{ minHeight: "100vh", background: "#f8fafc" }}>
-      <PublicNav />
       <div style={{ background: "linear-gradient(135deg,#1a1a2e,#2d2d4e)", padding: "70px 24px", textAlign: "center" }}>
         <div style={{ fontSize: 13, color: "#f97316", fontWeight: 700, letterSpacing: 2, marginBottom: 12 }}>INSIGHTS & STORIES</div>
         <h1 style={{ fontSize: "clamp(2rem,5vw,3rem)", fontWeight: 900, color: "#fff", marginBottom: 16 }}>The Freelancer.io Blog</h1>
