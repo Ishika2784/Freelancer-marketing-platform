@@ -1,5 +1,6 @@
-const Job = require("../models/Job");
+﻿const Job = require("../models/Job");
 const User = require("../models/User");
+const Message = require("../models/Message");
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const redis = require("../utils/redisClient");
 
@@ -104,7 +105,37 @@ exports.hireFreelancer = async (req, res) => {
         job.status = "in-progress";
         await job.save();
 
-        res.json({ message: "Freelancer hired successfully" });
+        // Push notification to hired freelancer
+        await User.findByIdAndUpdate(freelancerId, {
+            $push: {
+                notifications: {
+                    message: `🎉 You've been hired for "${job.title}"! The client is ready to start.`,
+                    type: "hired",
+                    read: false,
+                    jobId: job._id,
+                    fromUser: req.user.userId,
+                    createdAt: new Date()
+                }
+            }
+        });
+
+        // Auto-send first message to open the conversation on both sides
+        const client = await User.findById(req.user.userId).select("name");
+        const firstMsg = await Message.create({
+            from: req.user.userId,
+            to: freelancerId,
+            text: `Hi! 👋 I've hired you for "${job.title}". Looking forward to working with you! Let's get started.`,
+            jobId: job._id,
+        });
+
+        // Emit real-time to freelancer if online
+        const emitToUser = req.app.get("emitToUser");
+        if (emitToUser) {
+            const populated = await firstMsg.populate("from", "name _id");
+            emitToUser(freelancerId, "new_message", populated);
+        }
+
+        res.json({ message: "Freelancer hired successfully", freelancerId });
     } catch (error) {
         res.status(500).json({ message: "Server error" });
     }
@@ -227,49 +258,51 @@ exports.getJobMatches = async (req, res) => {
             `Name: ${f.name}\nSkills: ${f.skills ? f.skills.join(", ") : "Not specified"}\nHourly Rate: ${f.hourlyRate ? f.hourlyRate + ' INR' : 'Not specified'}`
         ).join("\n\n");
 
-        const prompt = `You are an AI assistant for a freelancer marketplace platform.
+        const prompt = `You are an expert technical recruiter AI for a freelancer marketplace.
 
-Your task is to intelligently match the best freelancers to a given job.
+Your task: Rank the TOP 3 freelancers best suited for this job.
 
-Instructions:
-* Carefully understand the job requirements, including title, description, required skills, and budget.
-* Compare freelancers based on:
-  * Skill relevance
-  * Experience (if mentioned)
-  * Budget fit (compare the job's budget with the freelancer's hourly rate)
-  * Overall suitability for the job
-* Prioritize freelancers whose skills closely match or are related to the job requirements AND whose hourly rate aligns reasonably well with the job budget.
-* Even if exact keywords do not match, use logical understanding (e.g., MERN = MongoDB, Express, React, Node).
-* Return ONLY the top 3 most relevant freelancers.
-* Keep explanations short and clear.
+Ranking Rules (apply in this order):
+1. SKILL MATCH — Does the freelancer cover the required skills? Apply these equivalences:
+   - "React" implies knowledge of HTML, CSS, JavaScript
+   - "MERN" implies MongoDB, Express, React, Node.js
+   - "Full Stack" implies both frontend and backend skills
+   - Treat related/superset skills as a match (e.g. React covers html+css+js)
+2. BUDGET FIT — The job budget is ${job.budget} INR (fixed price). Estimate project hours as budget/hourly_rate. Prefer freelancers whose hourly rate results in a cost WITHIN or CLOSE TO the budget. Lower rate with full skill match = better value = rank higher.
+3. COMPLETENESS — Freelancer who covers MORE of the required skills ranks higher than one who covers fewer, even at a higher rate.
+
+Important:
+- A freelancer with React skill automatically satisfies html, css, javascript requirements.
+- Rank by: (skill coverage score) first, then (budget efficiency) as tiebreaker.
+- Do NOT rank a higher-rate freelancer above a lower-rate one if both have equal skill coverage.
 
 Job Details:
 Title: ${job.title}
 Description: ${job.description}
-Budget: ${job.budget}
+Budget: ${job.budget} INR
 Required Skills: ${job.skills.join(", ")}
 
 Freelancers:
 ${freelancerList}
 
-Output format:
-1. Name: <freelancer name>
-   Skills: <skills>
-   Hourly Rate: <hourly rate>
-   Match Score: <High/Medium/Low>
-   Reason: <why this freelancer is a good match, specifically mentioning their skill fit AND how their rate compares to the ${job.budget} budget>
+Output format (strictly follow this):
+1. Name: <name>
+   Skills: <their skills>
+   Hourly Rate: <rate>
+   Match Score: High / Medium / Low
+   Reason: <explain skill coverage and why their rate is good/bad value for the ${job.budget} budget>
 
-2. Name: <freelancer name>
-   Skills: <skills>
-   Hourly Rate: <hourly rate>
-   Match Score: <High/Medium/Low>
-   Reason: <short explanation including budget fit>
+2. Name: <name>
+   Skills: <their skills>
+   Hourly Rate: <rate>
+   Match Score: High / Medium / Low
+   Reason: <explanation>
 
-3. Name: <freelancer name>
-   Skills: <skills>
-   Hourly Rate: <hourly rate>
-   Match Score: <High/Medium/Low>
-   Reason: <short explanation including budget fit>`;
+3. Name: <name>
+   Skills: <their skills>
+   Hourly Rate: <rate>
+   Match Score: High / Medium / Low
+   Reason: <explanation>`
 
         const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
         const model = genAI.getGenerativeModel({ model: "gemini-3-flash-preview" });

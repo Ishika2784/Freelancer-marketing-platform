@@ -1,6 +1,7 @@
 import { useNavigate, Link } from "react-router-dom";
 import { useState, useRef, useEffect } from "react";
 import { storage } from "../utils/storage";
+import { api } from "../utils/api";
 import "../styles.css";
 
 function Stars({ rating = 0 }) {
@@ -14,19 +15,30 @@ function Stars({ rating = 0 }) {
   );
 }
 
-const NOTIFS = [
-  { icon:"💼", text:"New bid on your React Dashboard job", time:"2m ago", read:false },
-  { icon:"✅", text:"Payment released for Logo Design", time:"1h ago", read:false },
-  { icon:"⭐", text:"You received a 5-star review!", time:"3h ago", read:true },
-  { icon:"🤖", text:"AI found 3 new matches for your job", time:"1d ago", read:true },
-];
+const NOTIF_ICONS = { hired: "🎉", info: "💼", message: "💬", default: "🔔" };
 
 export default function Navbar({ user }) {
   const navigate = useNavigate();
   const [menuOpen, setMenuOpen] = useState(false);
   const [showNotif, setShowNotif] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [notifs, setNotifs] = useState([]);
   const ref = useRef(null);
+
+  // Fetch real notifications
+  useEffect(() => {
+    if (!user) return;
+    api.get("/user/notifications")
+      .then(r => setNotifs(r.data || []))
+      .catch(() => {});
+  }, [user]);
+
+  const markRead = async () => {
+    if (notifs.some(n => !n.read)) {
+      await api.post("/user/notifications/read").catch(() => {});
+      setNotifs(n => n.map(x => ({ ...x, read: true })));
+    }
+  };
 
   const handleLogout = () => {
     storage.clearAuth();
@@ -56,7 +68,7 @@ export default function Navbar({ user }) {
     </nav>
   );
 
-  const unread = NOTIFS.filter(n => !n.read).length;
+  const unread = notifs.filter(n => !n.read).length;
   const planExpiry = user?.planExpiry ? new Date(user.planExpiry) : null;
   const daysLeft = planExpiry ? Math.max(0, Math.ceil((planExpiry - new Date()) / 86400000)) : null;
   const go = (path) => { navigate(path); setShowProfile(false); setMenuOpen(false); };
@@ -91,21 +103,23 @@ export default function Navbar({ user }) {
       <div className="nav-actions">
         {/* Notifications */}
         <div className="nav-avatar-wrap">
-          <button className="notif-btn" onClick={() => { setShowNotif(v => !v); setShowProfile(false); }}>
+          <button className="notif-btn" onClick={() => { setShowNotif(v => !v); setShowProfile(false); if (!showNotif) markRead(); }}>
             🔔 {unread > 0 && <span className="notif-badge">{unread}</span>}
           </button>
           {showNotif && (
             <div className="dropdown notif-panel">
               <div className="notif-header">
                 <span>Notifications</span>
-                <span className="notif-badge-count">{unread}</span>
+                {unread > 0 && <span className="notif-badge-count">{unread}</span>}
               </div>
-              {NOTIFS.map((n, i) => (
+              {notifs.length === 0 ? (
+                <div className="dropdown-empty">No notifications yet</div>
+              ) : notifs.map((n, i) => (
                 <div key={i} className={`notif-item ${n.read ? "" : "notif-unread"}`}>
-                  <span className="notif-icon">{n.icon}</span>
+                  <span className="notif-icon">{NOTIF_ICONS[n.type] || NOTIF_ICONS.default}</span>
                   <div>
-                    <div className="notif-text">{n.text}</div>
-                    <div className="notif-time">{n.time}</div>
+                    <div className="notif-text">{n.message}</div>
+                    <div className="notif-time">{new Date(n.createdAt).toLocaleDateString("en-IN", { day:"numeric", month:"short", hour:"2-digit", minute:"2-digit" })}</div>
                   </div>
                 </div>
               ))}

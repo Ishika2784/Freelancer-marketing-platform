@@ -53,4 +53,40 @@ router.put('/profile', authMiddleware, async (req, res) => {
     }
 });
 
+// Get notifications for logged-in user
+router.get('/notifications', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.user.userId).select('notifications');
+        if (!user) return res.status(404).json({ message: "User not found" });
+        const sorted = [...(user.notifications || [])].sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        res.json(sorted);
+    } catch (e) {
+        res.status(500).json({ message: "Error fetching notifications" });
+    }
+});
+
+// Mark all notifications as read
+router.post('/notifications/read', authMiddleware, async (req, res) => {
+    try {
+        await User.updateOne(
+            { _id: req.user.userId },
+            { $set: { "notifications.$[].read": true } }
+        );
+        res.json({ message: "Marked as read" });
+    } catch (e) {
+        res.status(500).json({ message: "Error marking notifications" });
+    }
+});
+
+// Get public profile of any user by id
+router.get('/profile/:id', authMiddleware, async (req, res) => {
+    try {
+        const user = await User.findById(req.params.id).select('-password -notifications');
+        if (!user) return res.status(404).json({ message: "User not found" });
+        res.json(user);
+    } catch (e) {
+        res.status(500).json({ message: "Error fetching profile" });
+    }
+});
+
 module.exports = router;

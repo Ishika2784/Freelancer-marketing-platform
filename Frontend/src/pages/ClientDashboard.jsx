@@ -2,11 +2,13 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import axios from "axios";
 import DashboardLayout from "../layouts/DashboardLayout";
-import { DashboardIcon, PostJobIcon, MyJobsIcon, FindFreelancersIcon } from "../components/NavIcons";
+import { DashboardIcon, PostJobIcon, MyJobsIcon, FindFreelancersIcon, ChatIcon } from "../components/NavIcons";
 import ClientOverview        from "./client/ClientOverview";
 import ClientPostJob         from "./client/ClientPostJob";
 import ClientMyJobs          from "./client/ClientMyJobs";
 import ClientFindFreelancers from "./client/ClientFindFreelancers";
+import Chat from "./Chat";
+import ChatBubble from "../components/ChatBubble";
 import { storage } from "../utils/storage";
 import "../styles.css";
 
@@ -45,6 +47,7 @@ export default function ClientDashboard({ page = "overview" }) {
       case "post":   return <ClientPostJob />;
       case "myjobs": return <ClientMyJobs />;
       case "talent": return <ClientFindFreelancers />;
+      case "chat":   return <Chat currentUser={user} />;
       default:       return <ClientOverview user={user} />;
     }
   };
@@ -67,8 +70,11 @@ export default function ClientDashboard({ page = "overview" }) {
   );
 
   return (
-    <DashboardLayout user={user} navItems={NAV_ITEMS} planCard={planCard}>
-      {renderPage()}
-    </DashboardLayout>
+    <>
+      <DashboardLayout user={user} navItems={NAV_ITEMS} planCard={planCard}>
+        {renderPage()}
+      </DashboardLayout>
+      <ChatBubble user={user} />
+    </>
   );
 }

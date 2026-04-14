@@ -36,6 +36,7 @@ const jobSchema = new mongoose.Schema({
     ],
 
     status: { type: String, enum: ["open", "in-progress", "completed"], default: "open" },
+    type: { type: String, enum: ["fixed", "hourly"], default: "fixed" },
     hiredFreelancer: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
     deadline: { type: Date, default: null },
     aiMatches: { type: String, default: null }, // cached AI response
@@ -45,6 +46,6 @@ const jobSchema = new mongoose.Schema({
         default: Date.now
     }
 
-});
+}, { timestamps: true });
 
 module.exports = mongoose.model("Job", jobSchema);

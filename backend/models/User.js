@@ -45,7 +45,17 @@ const userSchema = new mongoose.Schema({
     yearsOfExperience: {
         type: Number,
         default: 0
-    }
+    },
+    notifications: [
+        {
+            message: { type: String, required: true },
+            type: { type: String, default: "info" }, // info | hired | message
+            read: { type: Boolean, default: false },
+            createdAt: { type: Date, default: Date.now },
+            jobId: { type: mongoose.Schema.Types.ObjectId, ref: "Job" },
+            fromUser: { type: mongoose.Schema.Types.ObjectId, ref: "User" }
+        }
+    ]
 });
 
 const User = mongoose.model('User', userSchema);

@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { storage } from "../utils/storage";
 import { SettingsIcon, SignOutIcon } from "../components/NavIcons";
+import { clearAuthCache } from "../pages/ProtectedRoute";
 import "../styles.css";
 
 export default function DashboardLayout({ user, navItems, planCard, children }) {
@@ -12,6 +13,7 @@ export default function DashboardLayout({ user, navItems, planCard, children }) 
   useEffect(() => { setSidebarOpen(false); }, [location.pathname]);
 
   const handleLogout = () => {
+    clearAuthCache();
     storage.clearAuth();
     localStorage.removeItem("token");
     localStorage.removeItem("role");
